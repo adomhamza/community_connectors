@@ -73,6 +73,7 @@ def update(configuration: dict, state: dict):
     api_token = configuration.get("api_token")
     dataset_id = configuration.get("dataset_id")
     scrape_url_input = configuration.get("scrape_url", "")
+    new_state = dict(state) if state else {}
 
     urls = parse_scrape_urls(scrape_url_input)
 
@@ -82,7 +83,7 @@ def update(configuration: dict, state: dict):
         )
         log.error(message)
         raise RuntimeError(message)
-    sync_scrape_urls(api_token, dataset_id, urls, state)
+    sync_scrape_urls(api_token, dataset_id, urls, new_state)
 
 
 def parse_scrape_urls(scrape_url_input):
@@ -148,6 +149,10 @@ def _is_valid_url(url: str) -> bool:
 def sync_scrape_urls(api_token, dataset_id, urls, state):
     """
     Sync scrape results for the requested URLs.
+
+    Incremental behavior: URLs already recorded in state["last_scrape_urls"] are
+    skipped. Only newly configured URLs are scraped. Reset connector state in
+    Fivetran to re-scrape previously synced URLs.
     Args:
         api_token: Bright Data API token.
         dataset_id: ID of the dataset to use for scraping.
@@ -165,23 +170,47 @@ def sync_scrape_urls(api_token, dataset_id, urls, state):
         log.warning("No valid URLs to sync after filtering invalid entries")
         raise RuntimeError("No valid URLs configured for sync")
 
-    log.info(f"Starting scrape sync for {len(valid_urls)} URL(s)")
+    previously_synced = {
+        url for url in (state.get("last_scrape_urls") or []) if isinstance(url, str)
+    }
+    # Drop state entries that are no longer in the current config so a URL removed
+    # and later re-added will be scraped again.
+    previously_synced &= set(valid_urls)
+    urls_to_scrape = [url for url in valid_urls if url not in previously_synced]
 
-    # Fetch scrape results for all URLs
-    # The Bright Data REST API processes URLs and returns results in order
+    if not urls_to_scrape:
+        log.info(
+            f"All {len(valid_urls)} configured URL(s) were already synced; "
+            f"nothing new to scrape"
+        )
+        state["last_scrape_urls"] = valid_urls
+        state["last_scrape_count"] = 0
+        op.checkpoint(state)
+        return
+
+    skipped_count = len(valid_urls) - len(urls_to_scrape)
+    if skipped_count:
+        log.info(
+            f"Skipping {skipped_count} previously synced URL(s); "
+            f"scraping {len(urls_to_scrape)} new URL(s)"
+        )
+    else:
+        log.info(f"Starting scrape sync for {len(urls_to_scrape)} URL(s)")
+
+    # Fetch scrape results for new URLs only
     # Apply dataset-specific query parameters when needed
     if dataset_id == LINKEDIN_POST_BY_URL_DATASET_ID:
         scrape_results = perform_scrape(
             api_token=api_token,
             dataset_id=dataset_id,
-            url=valid_urls,
+            url=urls_to_scrape,
             extra_query_params={"discover_by": "profile_url", "type": "discover_new"},
         )
     else:
         scrape_results = perform_scrape(
             api_token=api_token,
             dataset_id=dataset_id,
-            url=valid_urls,
+            url=urls_to_scrape,
         )
 
     # Normalize results to always be a list
@@ -190,13 +219,20 @@ def sync_scrape_urls(api_token, dataset_id, urls, state):
 
     if not scrape_results:
         log.warning("No scrape results returned from API")
+        # Still mark URLs as synced to avoid repeatedly triggering empty jobs.
+        state["last_scrape_urls"] = list(dict.fromkeys([*previously_synced, *urls_to_scrape]))
+        state["last_scrape_count"] = 0
+        op.checkpoint(state)
         return
 
     # Process and flatten results
-    processed_results = process_scrape_results(scrape_results, valid_urls)
+    processed_results = process_scrape_results(scrape_results, urls_to_scrape)
 
     if not processed_results:
         log.warning("No processed results to upsert")
+        state["last_scrape_urls"] = list(dict.fromkeys([*previously_synced, *urls_to_scrape]))
+        state["last_scrape_count"] = 0
+        op.checkpoint(state)
         return
 
     log.info(f"Upserting {len(processed_results)} scrape results to Fivetran")
@@ -206,8 +242,8 @@ def sync_scrape_urls(api_token, dataset_id, urls, state):
     # Upsert each result
     process_and_upsert_results(processed_results, all_fields)
 
-    # Update state with sync information
-    state["last_scrape_urls"] = valid_urls
+    # Persist incremental progress: previously synced + newly scraped URLs
+    state["last_scrape_urls"] = list(dict.fromkeys([*previously_synced, *urls_to_scrape]))
     state["last_scrape_count"] = len(processed_results)
 
     op.checkpoint(state)
