@@ -109,26 +109,39 @@ def process_and_upsert_results(processed_results: list, all_fields: set, table_n
     primary_key_errors = []
 
     for result in processed_results:
+        skip_row = False
         for pk, pk_type in primary_keys.items():
-            if pk not in result:
+            if pk not in result or result.get(pk) is None or result.get(pk) == "":
                 primary_key_errors.append(f"Primary key '{pk}' missing from result")
-                result[pk] = pk_type() if pk_type == str else 0
-            elif not isinstance(result[pk], pk_type):
-                try:
-                    if pk_type == str:
-                        result[pk] = str(result[pk])
-                    elif pk_type == int:
-                        current_value = result[pk]
-                        if isinstance(current_value, str):
-                            cleaned = current_value.strip().strip("[]\"'")
-                            result[pk] = int(cleaned)
-                        else:
-                            result[pk] = int(current_value)
-                except (ValueError, TypeError):
-                    primary_key_errors.append(
-                        f"Could not convert primary key '{pk}' to {pk_type.__name__}"
-                    )
-                    result[pk] = pk_type() if pk_type == str else 0
+                skip_row = True
+                continue
+
+            if isinstance(result[pk], pk_type):
+                continue
+
+            try:
+                if pk_type == str:
+                    converted = str(result[pk]).strip()
+                    if not converted:
+                        primary_key_errors.append(f"Primary key '{pk}' missing from result")
+                        skip_row = True
+                        continue
+                    result[pk] = converted
+                elif pk_type == int:
+                    current_value = result[pk]
+                    if isinstance(current_value, str):
+                        cleaned = current_value.strip().strip("[]\"'")
+                        result[pk] = int(cleaned)
+                    else:
+                        result[pk] = int(current_value)
+            except (ValueError, TypeError):
+                primary_key_errors.append(
+                    f"Could not convert primary key '{pk}' to {pk_type.__name__}"
+                )
+                skip_row = True
+
+        if skip_row:
+            continue
 
         row = {field: result.get(field) for field in all_fields}
         op.upsert(table=table_name, data=row)
@@ -136,6 +149,7 @@ def process_and_upsert_results(processed_results: list, all_fields: set, table_n
     if primary_key_errors:
         unique_errors = list(set(primary_key_errors))
         log.warning(
-            f"Primary key validation issues: {', '.join(unique_errors[:3])}"
+            f"Skipped rows due to primary key validation issues: "
+            f"{', '.join(unique_errors[:3])}"
             f"{' (and more)' if len(unique_errors) > 3 else ''}"
         )
