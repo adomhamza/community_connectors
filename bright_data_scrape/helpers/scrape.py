@@ -371,7 +371,7 @@ def _poll_snapshot(
         snapshot_id: Snapshot ID to poll
         poll_interval: Interval between polling attempts in seconds
         timeout: Request timeout in seconds
-        max_attempts: Maximum number of polling attempts before raising an error (default: 1000)
+        max_attempts: Maximum number of polling attempts before raising an error (default: 100)
 
     Returns:
         Snapshot data when ready (dict or list)
