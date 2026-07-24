@@ -111,9 +111,18 @@ def sync_unlocker_urls(configuration: dict, urls: list, state: dict):
 
     processed_results = []
     for index, result in enumerate(unlocker_results):
+        # perform_web_unlocker / _normalize_unlocker_result always injects requested_url
+        # via setdefault; do not infer it from the global index (that misattributes
+        # results when some URLs return multiple rows).
         requested_url = result.get("requested_url") if isinstance(result, dict) else None
         if not requested_url:
-            requested_url = urls[index % len(urls)]
+            if len(urls) == 1:
+                requested_url = urls[0]
+            else:
+                log.warning(
+                    f"Unlocker result at index {index} is missing requested_url; skipping"
+                )
+                continue
         processed_results.append(process_unlocker_result(result, requested_url, index))
 
     if not processed_results:
