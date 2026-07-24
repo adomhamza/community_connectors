@@ -7,7 +7,7 @@ import json
 import time
 
 # For type hints in function signatures
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 # For making HTTP requests to the Bright Data API
 import requests
@@ -48,7 +48,9 @@ def _extract_error_detail(response: Response) -> str:
         return response.text
 
 
-def _parse_large_json_array_streaming(response, max_size_bytes: int = MAX_RESPONSE_SIZE_BYTES):
+def _parse_large_json_array_streaming(
+    response, max_size_bytes: int = MAX_RESPONSE_SIZE_BYTES
+) -> Tuple[Optional[List[Any]], Optional[str]]:
     """
     Parse a large JSON array response using chunked reading to manage memory.
 
@@ -63,17 +65,22 @@ def _parse_large_json_array_streaming(response, max_size_bytes: int = MAX_RESPON
         max_size_bytes: Threshold for using chunked reading (default 100MB)
 
     Returns:
-        List of parsed JSON objects, or None if not applicable/parse failed
+        Tuple of (parsed_list_or_None, buffered_body_or_None):
+        - (list, str): successfully parsed JSON array (body was consumed)
+        - (None, str): body was consumed but is not a parseable JSON array; caller
+          must parse buffered_body (do not call response.json())
+        - (None, None): chunked path not applicable; response body was not consumed
     """
     content_length = response.headers.get("Content-Length")
 
     # Only attempt chunked parsing for responses larger than threshold
     if not content_length or int(content_length) < max_size_bytes:
-        return None
+        return None, None
 
+    # Once iter_content starts, the response stream is drained — always return
+    # the buffer so callers can fall back without calling response.json().
+    buffer = ""
     try:
-        # Read response in chunks to monitor progress and manage memory pressure
-        buffer = ""
         chunk_count = 0
         for chunk in response.iter_content(chunk_size=CHUNK_SIZE_BYTES, decode_unicode=True):
             if chunk:
@@ -89,8 +96,7 @@ def _parse_large_json_array_streaming(response, max_size_bytes: int = MAX_RESPON
         # Verify it looks like a JSON array
         buffer_stripped = buffer.strip()
         if not buffer_stripped.startswith("["):
-            # Not a JSON array, fall back to standard parsing
-            return None
+            return None, buffer
 
         # Parse the accumulated JSON array
         # Note: We still need to load it all for JSON array parsing
@@ -102,19 +108,19 @@ def _parse_large_json_array_streaming(response, max_size_bytes: int = MAX_RESPON
                 f"Successfully parsed large JSON array with {len(parsed_data)} records "
                 f"({len(buffer)} bytes)"
             )
-            return parsed_data
+            return parsed_data, buffer
+
+        return None, buffer
 
     except (json.JSONDecodeError, ValueError, MemoryError) as e:
         log.warning(
             f"Failed to parse large JSON response: {str(e)}. "
             f"Consider using JSONL format for very large datasets."
         )
-        return None
+        return None, buffer
     except Exception as e:
-        log.info(f"Chunked parse encountered error: {str(e)}, falling back to standard parsing")
-        return None
-
-    return None
+        log.info(f"Chunked parse encountered error: {str(e)}, falling back to buffered text")
+        return None, buffer
 
 
 def perform_scrape(
@@ -472,13 +478,17 @@ def _parse_snapshot_response(
         )
 
         # Try chunked parsing for large JSON arrays
-        chunked_data = _parse_large_json_array_streaming(response, max_size_bytes)
+        chunked_data, buffered_body = _parse_large_json_array_streaming(response, max_size_bytes)
         if chunked_data is not None:
             log.info(
                 f"Snapshot {snapshot_id[:8]}... ready (chunked parse with {len(chunked_data)} records) "
                 f"after {attempt} attempt(s)"
             )
             return chunked_data
+
+        # Body was already drained by iter_content; never call response.json().
+        if buffered_body is not None:
+            return _parse_text_response(buffered_body, snapshot_id, attempt)
 
     # Parse standard JSON response
     return _parse_json_response(response, snapshot_id, attempt)
