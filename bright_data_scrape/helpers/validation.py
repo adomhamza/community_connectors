@@ -16,5 +16,5 @@ def validate_configuration(configuration: dict) -> None:
     """
     required_configs = ["api_token", "dataset_id", "scrape_url"]
     for key in required_configs:
-        if key not in configuration:
+        if key not in configuration or not configuration.get(key):
             raise ValueError(f"Missing required configuration value: {key}")
