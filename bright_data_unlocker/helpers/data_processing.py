@@ -29,7 +29,7 @@ def flatten_dict(
         A dictionary with the flattened dictionary.
     """
     if max_depth <= 0:
-        return {parent_key: json.dumps(data) if data else None}
+        return {parent_key or "_overflow": json.dumps(data) if data else None}
 
     items: list = []
 
