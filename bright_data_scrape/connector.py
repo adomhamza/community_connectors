@@ -215,6 +215,17 @@ def sync_scrape_urls(api_token, dataset_id, urls, state):
     log.info(f"Completed scrape sync. Total synced: {len(processed_results)} results")
 
 
+def _extract_result_url(result, fallback_url=None):
+    """Prefer the URL embedded in a scrape result payload over index-based attribution."""
+    if isinstance(result, dict):
+        input_field = result.get("input")
+        if isinstance(input_field, dict) and input_field.get("url"):
+            return str(input_field["url"])
+        if result.get("url"):
+            return str(result["url"])
+    return fallback_url
+
+
 def process_scrape_results(scrape_results, urls):
     """
     Process and flatten scrape results.
@@ -225,54 +236,56 @@ def process_scrape_results(scrape_results, urls):
         list: List of processed result dictionaries.
     """
     processed_results = []
+    url_result_counts = {url: 0 for url in urls}
+    skipped_unattributed = 0
 
-    if len(urls) == 1 and len(scrape_results) > 1:
-        # Single URL with multiple results - process all results
-        url = urls[0]
-        log.info(
-            f"Processing {len(scrape_results)} results from single URL. "
-            f"Each result will get a unique result_index (0 to {len(scrape_results) - 1})"
+    # Flat batch responses are not guaranteed to align 1:1 with request URL order.
+    if len(urls) > 1 and len(scrape_results) != len(urls):
+        log.warning(
+            f"Result count ({len(scrape_results)}) differs from URL count ({len(urls)}). "
+            f"Attributing results by embedded URL when available."
         )
-        for result_idx, result in enumerate(scrape_results):
-            if isinstance(result, dict):
-                result_url = (
-                    result.get("input", {}).get("url") or result.get("url") or url
-                )
-                processed_results.append(
-                    process_scrape_result(result, result_url, result_idx)
-                )
-            elif isinstance(result, list):
-                for item_idx, item in enumerate(result):
-                    result_url = (
-                        item.get("input", {}).get("url")
-                        if isinstance(item, dict)
-                        else url
-                    )
-                    processed_results.append(
-                        process_scrape_result(item, result_url or url, item_idx)
-                    )
-    else:
-        # Multiple URLs or one-to-one mapping - match by index
-        missing_results = []
-        for url_idx, url in enumerate(urls):
-            if url_idx < len(scrape_results):
-                result = scrape_results[url_idx]
-                if isinstance(result, list):
-                    for item_idx, item in enumerate(result):
-                        processed_results.append(
-                            process_scrape_result(item, url, item_idx)
-                        )
-                else:
-                    processed_results.append(process_scrape_result(result, url, 0))
-            else:
-                missing_results.append((url_idx, url))
-        # Log missing results once after processing
-        if missing_results:
-            log.warning(
-                f"No result found for {len(missing_results)} URL(s) at indices: "
-                f"{', '.join(str(idx) for idx, _ in missing_results[:5])}"
-                f"{' (and more)' if len(missing_results) > 5 else ''}"
-            )
+
+    # Flatten nested list payloads into individual result items.
+    flat_items = []
+    for source_idx, result in enumerate(scrape_results):
+        if isinstance(result, list):
+            for item in result:
+                flat_items.append((item, source_idx))
+        else:
+            flat_items.append((result, source_idx))
+
+    allow_index_fallback = len(urls) == 1 or len(scrape_results) == len(urls)
+
+    for result, source_idx in flat_items:
+        fallback_url = None
+        if allow_index_fallback:
+            if len(urls) == 1:
+                fallback_url = urls[0]
+            elif source_idx < len(urls):
+                fallback_url = urls[source_idx]
+
+        result_url = _extract_result_url(result, fallback_url=fallback_url)
+        if not result_url:
+            skipped_unattributed += 1
+            continue
+
+        result_index = url_result_counts.get(result_url, 0)
+        processed_results.append(process_scrape_result(result, result_url, result_index))
+        url_result_counts[result_url] = result_index + 1
+
+    missing_urls = [url for url in urls if url_result_counts.get(url, 0) == 0]
+    if missing_urls:
+        log.warning(
+            f"No result found for {len(missing_urls)} URL(s): "
+            f"{', '.join(missing_urls[:5])}"
+            f"{' (and more)' if len(missing_urls) > 5 else ''}"
+        )
+
+    if skipped_unattributed:
+        log.warning(
+            f"Skipped {skipped_unattributed} result(s) that could not be attributed to a URL"
+        )
 
     return processed_results
 
