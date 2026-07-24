@@ -175,17 +175,25 @@ def _execute_unlocker_request(
             if response.status_code == 200:
                 return _parse_response_payload(response)
 
-            if response.status_code in __RETRY_STATUS_CODES and attempt < retries:
-                attempt += 1
-                log.warning(
-                    f"Bright Data Unlocker request retry {attempt}/{retries} "
-                    f"for URL '{payload.get('url')}' (status code: {response.status_code})"
-                )
-                time.sleep(backoff)
-                backoff *= backoff_factor
-                continue
-
             error_detail = _extract_error_detail(response)
+
+            if response.status_code in __RETRY_STATUS_CODES:
+                if attempt < retries:
+                    attempt += 1
+                    log.warning(
+                        f"Bright Data Unlocker request retry {attempt}/{retries} "
+                        f"for URL '{payload.get('url')}' (status code: {response.status_code})"
+                    )
+                    time.sleep(backoff)
+                    backoff *= backoff_factor
+                    continue
+
+                raise RuntimeError(
+                    f"Bright Data Unlocker request failed for URL '{payload.get('url')}' "
+                    f"after retry limit reached ({retries} retries, "
+                    f"status code: {response.status_code}): {error_detail}"
+                )
+
             raise RuntimeError(
                 f"Bright Data Unlocker request failed for URL '{payload.get('url')}': "
                 f"{error_detail}"
