@@ -206,8 +206,6 @@ def _execute_unlocker_request(
                 f"'{payload.get('url')}' after {retries} retries: {str(exc)}"
             ) from exc
 
-    raise RuntimeError("Failed to trigger Bright Data Unlocker request after retries")
-
 
 def _normalize_unlocker_result(payload: Any, source_url: str) -> list:
     """Normalize the unlocker result.
