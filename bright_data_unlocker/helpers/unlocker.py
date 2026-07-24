@@ -166,7 +166,7 @@ def _execute_unlocker_request(
     while attempt <= retries:
         try:
             response = requests.post(
-                f"{__BRIGHT_DATA_BASE_URL}/request?async=true",
+                f"{__BRIGHT_DATA_BASE_URL}/request",
                 headers=headers,
                 json=payload,
                 timeout=timeout,
