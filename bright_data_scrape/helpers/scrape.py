@@ -721,10 +721,23 @@ def _log_polling_progress(snapshot_id: str, attempt: int, response: Response) ->
 
 
 def _handle_non_200_response(response: Response, snapshot_id: str, attempt: int) -> None:
-    """Handle non-200 HTTP responses."""
+    """Handle non-200 HTTP responses during snapshot polling.
+
+    Transient status codes (RETRY_STATUS_CODES) raise HTTPError so the poll loop
+    can retry. Non-transient codes (e.g. 400/401/403) raise RuntimeError immediately
+    so they are not swallowed by the RequestException retry handler.
+    """
     error_detail = _extract_error_detail(response)
     log.info(
         f"Error polling snapshot {snapshot_id[:8]}... "
         f"(status {response.status_code}): {error_detail}"
     )
+
+    if response.status_code not in RETRY_STATUS_CODES:
+        raise RuntimeError(
+            f"Snapshot {snapshot_id[:8]}... poll failed with non-retryable status "
+            f"{response.status_code}: {error_detail}"
+        )
+
+    # Transient error — raise so except RequestException can sleep and retry.
     response.raise_for_status()
