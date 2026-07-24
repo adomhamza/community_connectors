@@ -28,7 +28,7 @@ Note: Ensure you have updated the `configuration.json` file with the necessary p
 ## Features
 
 - Fetches unlocked web content via Bright Data Web Unlocker API
-- Supports multiple URL input formats (single URL, comma-separated, newline-separated, JSON array string)
+- Supports multiple URL input formats (single URL, newline-separated, JSON array string, or comma-separated absolute http(s) URLs)
 - Flattens nested JSON structures for analysis
 - Dynamically discovers fields from API responses
 - Includes retry logic with exponential backoff for transient API errors
@@ -50,7 +50,7 @@ Note: Ensure you have updated the `configuration.json` file with the necessary p
 Configuration parameters:
 
 - `api_token` (required): Your Bright Data API token
-- `unlocker_url` (required): URL or URLs to fetch via the Web Unlocker
+- `unlocker_url` (required): URL or URLs to fetch via the Web Unlocker. For multiple URLs prefer newlines or a JSON array. Comma-separated values are accepted only when every token is an absolute `http://` or `https://` URL, so commas in a query string (e.g. `?a=1,b=2`) are kept as part of a single URL. Percent-encode query commas (`%2C`) if you also rely on comma as a multi-URL delimiter.
 - `zone` (optional): Bright Data unlocker zone identifier. Defaults to `web_unlocker1`
 - `country` (optional): ISO 3166-1 alpha-2 country code. Defaults to `us`
 - `method` (optional): HTTP method. Defaults to `GET`

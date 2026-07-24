@@ -141,6 +141,11 @@ def sync_unlocker_urls(configuration: dict, urls: list, state: dict):
 def parse_unlocker_urls(unlocker_url_input) -> list:
     """
     Normalize the unlocker_url configuration value into a list of URLs.
+
+    Multi-URL string inputs may be newline-separated, a JSON array, or
+    comma-separated when every token is an absolute http(s) URL. Commas inside
+    a single URL's query string are preserved (e.g. ?a=1,b=2) because that split
+    would not produce http(s)-prefixed tokens.
     Args:
         unlocker_url_input: The unlocker_url configuration value (various formats supported).
     Returns:
@@ -164,11 +169,16 @@ def parse_unlocker_urls(unlocker_url_input) -> list:
         except (json.JSONDecodeError, TypeError):
             pass
 
-        if "," in unlocker_url_input:
-            return [item.strip() for item in unlocker_url_input.split(",") if item.strip()]
-
+        # Prefer newlines for multi-URL input so commas in query strings are safe.
         if "\n" in unlocker_url_input:
             return [item.strip() for item in unlocker_url_input.split("\n") if item.strip()]
+
+        if "," in unlocker_url_input:
+            candidates = [item.strip() for item in unlocker_url_input.split(",") if item.strip()]
+            if candidates and all(
+                item.lower().startswith(("http://", "https://")) for item in candidates
+            ):
+                return candidates
 
         return [unlocker_url_input.strip()] if unlocker_url_input.strip() else []
 
