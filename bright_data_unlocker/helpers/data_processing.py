@@ -121,7 +121,7 @@ def process_and_upsert_results(processed_results: list, all_fields: set, table_n
                         current_value = result[pk]
                         if isinstance(current_value, str):
                             cleaned = current_value.strip().strip("[]\"'")
-                            result[pk] = int(cleaned) if cleaned.isdigit() else 0
+                            result[pk] = int(cleaned)
                         else:
                             result[pk] = int(current_value)
                 except (ValueError, TypeError):
