@@ -120,17 +120,25 @@ def parse_scrape_urls(scrape_url_input):
             # Not valid JSON – treat as plain string (single URL or delimited list)
             pass
 
-        # Try comma-separated format
-        if "," in scrape_url_input:
-            return [
-                item.strip() for item in scrape_url_input.split(",") if item.strip()
-            ]
-
-        # Try newline-separated format
+        # Prefer newlines for multi-URL input so commas in query strings are safer.
         if "\n" in scrape_url_input:
             return [
                 item.strip() for item in scrape_url_input.split("\n") if item.strip()
             ]
+
+        # Comma-split only when the unsplit string is not itself a valid URL, or when
+        # every comma-delimited token is a valid URL (true multi-URL list).
+        # This preserves query commas like https://example.com/search?q=a,b.
+        if "," in scrape_url_input:
+            stripped = scrape_url_input.strip()
+            candidates = [
+                item.strip() for item in scrape_url_input.split(",") if item.strip()
+            ]
+            if len(candidates) > 1 and all(_is_valid_url(c) for c in candidates):
+                return candidates
+            if _is_valid_url(stripped):
+                return [stripped]
+            return candidates
 
         # Single URL (or invalid string – downstream validation can filter)
         return [scrape_url_input.strip()] if scrape_url_input.strip() else []
