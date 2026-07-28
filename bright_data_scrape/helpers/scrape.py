@@ -418,6 +418,16 @@ def _poll_snapshot(
                     time.sleep(poll_interval)
                     continue
 
+            elif response.status_code == 202:
+                # Accepted / still processing — wait and poll again
+                if attempt % 5 == 0:
+                    log.info(
+                        f"Snapshot {snapshot_id[:8]}... accepted (202), "
+                        f"still processing (attempt {attempt})"
+                    )
+                time.sleep(poll_interval)
+                continue
+
             elif response.status_code == 404:
                 error_msg = f"Snapshot {snapshot_id[:8]}... not found"
                 log.info(error_msg)
