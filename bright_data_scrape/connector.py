@@ -196,6 +196,12 @@ def sync_scrape_urls(api_token, dataset_id, urls, state):
         )
         state["last_scrape_urls"] = valid_urls
         state["last_scrape_count"] = 0
+        # Save the progress by checkpointing the state. This is important for ensuring that the sync process can resume
+        # from the correct position in case of next sync or interruptions.
+        # You should checkpoint even if you are not using incremental sync, as it tells Fivetran it is safe to write to destination.
+        # For large datasets, checkpoint regularly (e.g., every N records) not only at the end.
+        # Learn more about how and where to checkpoint by reading our best practices documentation
+        # (https://fivetran.com/docs/connector-sdk/best-practices#optimizingperformancewhenhandlinglargedatasets).
         op.checkpoint(state)
         return
 
@@ -233,6 +239,12 @@ def sync_scrape_urls(api_token, dataset_id, urls, state):
         # Still mark URLs as synced to avoid repeatedly triggering empty jobs.
         state["last_scrape_urls"] = list(dict.fromkeys([*previously_synced, *urls_to_scrape]))
         state["last_scrape_count"] = 0
+        # Save the progress by checkpointing the state. This is important for ensuring that the sync process can resume
+        # from the correct position in case of next sync or interruptions.
+        # You should checkpoint even if you are not using incremental sync, as it tells Fivetran it is safe to write to destination.
+        # For large datasets, checkpoint regularly (e.g., every N records) not only at the end.
+        # Learn more about how and where to checkpoint by reading our best practices documentation
+        # (https://fivetran.com/docs/connector-sdk/best-practices#optimizingperformancewhenhandlinglargedatasets).
         op.checkpoint(state)
         return
 
@@ -243,6 +255,12 @@ def sync_scrape_urls(api_token, dataset_id, urls, state):
         log.warning("No processed results to upsert")
         state["last_scrape_urls"] = list(dict.fromkeys([*previously_synced, *urls_to_scrape]))
         state["last_scrape_count"] = 0
+        # Save the progress by checkpointing the state. This is important for ensuring that the sync process can resume
+        # from the correct position in case of next sync or interruptions.
+        # You should checkpoint even if you are not using incremental sync, as it tells Fivetran it is safe to write to destination.
+        # For large datasets, checkpoint regularly (e.g., every N records) not only at the end.
+        # Learn more about how and where to checkpoint by reading our best practices documentation
+        # (https://fivetran.com/docs/connector-sdk/best-practices#optimizingperformancewhenhandlinglargedatasets).
         op.checkpoint(state)
         return
 
@@ -257,6 +275,12 @@ def sync_scrape_urls(api_token, dataset_id, urls, state):
     state["last_scrape_urls"] = list(dict.fromkeys([*previously_synced, *urls_to_scrape]))
     state["last_scrape_count"] = len(processed_results)
 
+    # Save the progress by checkpointing the state. This is important for ensuring that the sync process can resume
+    # from the correct position in case of next sync or interruptions.
+    # You should checkpoint even if you are not using incremental sync, as it tells Fivetran it is safe to write to destination.
+    # For large datasets, checkpoint regularly (e.g., every N records) not only at the end.
+    # Learn more about how and where to checkpoint by reading our best practices documentation
+    # (https://fivetran.com/docs/connector-sdk/best-practices#optimizingperformancewhenhandlinglargedatasets).
     op.checkpoint(state)
 
     log.info(f"Completed scrape sync. Total synced: {len(processed_results)} results")
