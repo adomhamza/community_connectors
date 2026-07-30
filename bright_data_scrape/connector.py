@@ -81,9 +81,7 @@ def update(configuration: dict, state: dict):
     urls = parse_scrape_urls(scrape_url_input)
 
     if not urls:
-        message = (
-            f"No URLs provided in configuration; scrape_url input: {scrape_url_input}"
-        )
+        message = f"No URLs provided in configuration; scrape_url input: {scrape_url_input}"
         log.error(message)
         raise RuntimeError(message)
     sync_scrape_urls(api_token, dataset_id, urls, new_state)
@@ -102,9 +100,7 @@ def parse_scrape_urls(scrape_url_input):
 
     if isinstance(scrape_url_input, list):
         return [
-            item.strip()
-            for item in scrape_url_input
-            if isinstance(item, str) and item.strip()
+            item.strip() for item in scrape_url_input if isinstance(item, str) and item.strip()
         ]
 
     if isinstance(scrape_url_input, str):
@@ -112,11 +108,7 @@ def parse_scrape_urls(scrape_url_input):
         try:
             parsed = json.loads(scrape_url_input)
             if isinstance(parsed, list):
-                return [
-                    item.strip()
-                    for item in parsed
-                    if isinstance(item, str) and item.strip()
-                ]
+                return [item.strip() for item in parsed if isinstance(item, str) and item.strip()]
             if isinstance(parsed, str) and parsed.strip():
                 return [parsed.strip()]
         except (json.JSONDecodeError, TypeError):
@@ -125,18 +117,14 @@ def parse_scrape_urls(scrape_url_input):
 
         # Prefer newlines for multi-URL input so commas in query strings are safer.
         if "\n" in scrape_url_input:
-            return [
-                item.strip() for item in scrape_url_input.split("\n") if item.strip()
-            ]
+            return [item.strip() for item in scrape_url_input.split("\n") if item.strip()]
 
         # Comma-split only when the unsplit string is not itself a valid URL, or when
         # every comma-delimited token is a valid URL (true multi-URL list).
         # This preserves query commas like https://example.com/search?q=a,b.
         if "," in scrape_url_input:
             stripped = scrape_url_input.strip()
-            candidates = [
-                item.strip() for item in scrape_url_input.split(",") if item.strip()
-            ]
+            candidates = [item.strip() for item in scrape_url_input.split(",") if item.strip()]
             if len(candidates) > 1 and all(_is_valid_url(c) for c in candidates):
                 return candidates
             if _is_valid_url(stripped):
