@@ -26,6 +26,17 @@ MAX_RESPONSE_SIZE_BYTES = 100 * 1024 * 1024
 CHUNK_SIZE_BYTES = 8192
 
 
+def _content_length_bytes(response: Response) -> Optional[int]:
+    """Return Content-Length as an int, or None if missing/invalid."""
+    content_length = response.headers.get("Content-Length")
+    if content_length is None:
+        return None
+    try:
+        return int(content_length)
+    except (TypeError, ValueError):
+        return None
+
+
 def _parse_response_payload(response: Response) -> Any:
     """Return JSON payload when available, otherwise raw text."""
     try:
@@ -71,27 +82,32 @@ def _parse_large_json_array_streaming(
           must parse buffered_body (do not call response.json())
         - (None, None): chunked path not applicable; response body was not consumed
     """
-    content_length = response.headers.get("Content-Length")
+    content_length = _content_length_bytes(response)
 
-    # Only attempt chunked parsing for responses larger than threshold
-    if not content_length or int(content_length) < max_size_bytes:
+    # Only attempt chunked parsing for responses larger than threshold.
+    # Use <= so this matches the caller's `size > max_size_bytes` gate.
+    if content_length is None or content_length <= max_size_bytes:
         return None, None
 
     # Once iter_content starts, the response stream is drained — always return
     # the buffer so callers can fall back without calling response.json().
-    buffer = ""
+    chunks: List[str] = []
+    bytes_read = 0
     try:
         chunk_count = 0
         for chunk in response.iter_content(chunk_size=CHUNK_SIZE_BYTES, decode_unicode=True):
             if chunk:
-                buffer += chunk
+                chunks.append(chunk)
+                bytes_read += len(chunk)
                 chunk_count += 1
                 # Log progress for very large responses
                 if chunk_count % 1000 == 0:
                     log.info(
-                        f"Reading large response: {len(buffer)} bytes read "
+                        f"Reading large response: {bytes_read} bytes read "
                         f"({chunk_count} chunks)"
                     )
+
+        buffer = "".join(chunks)
 
         # Verify it looks like a JSON array
         buffer_stripped = buffer.strip()
@@ -117,10 +133,10 @@ def _parse_large_json_array_streaming(
             f"Failed to parse large JSON response: {str(e)}. "
             f"Consider using JSONL format for very large datasets."
         )
-        return None, buffer
+        return None, "".join(chunks)
     except Exception as e:
         log.info(f"Chunked parse encountered error: {str(e)}, falling back to buffered text")
-        return None, buffer
+        return None, "".join(chunks)
 
 
 def perform_scrape(
@@ -320,24 +336,31 @@ def _trigger_scrape(
                     )
                 raise ValueError(f"Invalid scrape request: {error_detail}")
 
-            # Retry on certain status codes
-            if response.status_code in RETRY_STATUS_CODES and attempt < retries:
-                log.info(
-                    f"Bright Data scrape trigger retry {attempt + 1}/{retries} "
-                    f"(status code: {response.status_code})"
-                )
-                attempt += 1
-                time.sleep(backoff)
-                backoff *= backoff_factor
-                continue
-
-            # For other errors, raise with details
             error_detail = _extract_error_detail(response)
-            log.info(
-                f"Bright Data scrape trigger failed (status {response.status_code}): "
-                f"{error_detail}"
+
+            # Retry on certain status codes
+            if response.status_code in RETRY_STATUS_CODES:
+                if attempt < retries:
+                    log.info(
+                        f"Bright Data scrape trigger retry {attempt + 1}/{retries} "
+                        f"(status code: {response.status_code})"
+                    )
+                    attempt += 1
+                    time.sleep(backoff)
+                    backoff *= backoff_factor
+                    continue
+
+                raise RuntimeError(
+                    f"Bright Data scrape trigger failed after retry limit reached "
+                    f"({retries} retries, status code: {response.status_code}): {error_detail}"
+                )
+
+            # Non-retryable status (e.g. 401/403/404): fail immediately rather than
+            # raising HTTPError, which the except RequestException handler would retry.
+            raise RuntimeError(
+                f"Bright Data scrape trigger failed with non-retryable status "
+                f"{response.status_code}: {error_detail}"
             )
-            response.raise_for_status()
 
         except RequestException as exc:
             if attempt < retries:
@@ -478,9 +501,9 @@ def _parse_snapshot_response(
         return _parse_jsonl_response(response, snapshot_id, attempt)
 
     # Check for large responses
-    content_length = response.headers.get("Content-Length")
+    content_length = _content_length_bytes(response)
     max_size_bytes = MAX_RESPONSE_SIZE_BYTES
-    if content_length and int(content_length) > max_size_bytes:
+    if content_length is not None and content_length > max_size_bytes:
         log.warning(
             f"Snapshot {snapshot_id[:8]}... response size ({content_length} bytes) exceeds "
             f"maximum recommended size ({max_size_bytes} bytes). "
