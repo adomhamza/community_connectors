@@ -24,6 +24,15 @@ RETRY_STATUS_CODES = {408, 429, 500, 502, 503, 504}
 
 MAX_RESPONSE_SIZE_BYTES = 100 * 1024 * 1024
 CHUNK_SIZE_BYTES = 8192
+MAX_LOG_PREVIEW_CHARS = 500
+
+
+def _truncate_for_log(value: Any, limit: int = MAX_LOG_PREVIEW_CHARS) -> str:
+    """Return a bounded string preview so response bodies are never fully logged."""
+    text = str(value)
+    if len(text) <= limit:
+        return text
+    return f"{text[:limit]}... (truncated, {len(text)} chars total)"
 
 
 def _content_length_bytes(response: Response) -> Optional[int]:
@@ -318,23 +327,16 @@ def _trigger_scrape(
             # Handle 400/422 as ValueError (invalid input)
             if response.status_code in (400, 422):
                 error_detail = _extract_error_detail(response)
-                # Log the full response for debugging
-                try:
-                    response_json = response.json()
-                    log.info(
-                        f"Invalid scrape request (status {response.status_code}): {error_detail}. "
-                        f"Request URL: {response.url}, "
-                        f"Request payload (first URL): {body_payload[0] if body_payload else 'empty'}, "
-                        f"Full response: {response_json}"
-                    )
-                except ValueError:
-                    log.info(
-                        f"Invalid scrape request (status {response.status_code}): {error_detail}. "
-                        f"Request URL: {response.url}, "
-                        f"Request payload (first URL): {body_payload[0] if body_payload else 'empty'}, "
-                        f"Response text: {response.text[:500]}"
-                    )
-                raise ValueError(f"Invalid scrape request: {error_detail}")
+                # Log a bounded preview only; response bodies can be large and may
+                # contain scraped personal data.
+                log.info(
+                    f"Invalid scrape request (status {response.status_code}): "
+                    f"{_truncate_for_log(error_detail)}. "
+                    f"Request URL: {response.url}, "
+                    f"Request payload (first URL): {body_payload[0] if body_payload else 'empty'}, "
+                    f"Response preview: {_truncate_for_log(response.text)}"
+                )
+                raise ValueError(f"Invalid scrape request: {_truncate_for_log(error_detail)}")
 
             error_detail = _extract_error_detail(response)
 
