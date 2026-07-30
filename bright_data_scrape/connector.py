@@ -32,7 +32,7 @@ from helpers import (
 __SCRAPE_TABLE = "scrape_results"
 
 # Linkedin Post By URL dataset ids
-LINKEDIN_POST_BY_URL_DATASET_ID = "gd_d85r5d60186q96c883"
+__LINKEDIN_POST_BY_URL_DATASET_ID = "gd_d85r5d60186q96c883"
 
 
 def schema(configuration: dict):
@@ -216,7 +216,7 @@ def sync_scrape_urls(api_token, dataset_id, urls, state):
 
     # Fetch scrape results for new URLs only
     # Apply dataset-specific query parameters when needed
-    if dataset_id == LINKEDIN_POST_BY_URL_DATASET_ID:
+    if dataset_id == __LINKEDIN_POST_BY_URL_DATASET_ID:
         scrape_results = perform_scrape(
             api_token=api_token,
             dataset_id=dataset_id,
