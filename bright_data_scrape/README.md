@@ -14,7 +14,7 @@ This connector syncs web scraping data from Bright Data's Web Scraper API to you
 
 ## Getting started
 
-Refer to the [Connector SDK Setup Guide](https://fivetran.com/docs/connector-sdk/setup-guide) to get started.
+Refer to the [Connector SDK Setup Guide](https://fivetran.com/docs/connectors/connector-sdk/setup-guide) to get started.
 
 To initialize a new Connector SDK project using this connector as a starting point, run:
 
