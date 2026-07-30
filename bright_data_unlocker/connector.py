@@ -119,9 +119,7 @@ def sync_unlocker_urls(configuration: dict, urls: list, state: dict):
             if len(urls) == 1:
                 requested_url = urls[0]
             else:
-                log.warning(
-                    f"Unlocker result at index {index} is missing requested_url; skipping"
-                )
+                log.warning(f"Unlocker result at index {index} is missing requested_url; skipping")
                 continue
         processed_results.append(process_unlocker_result(result, requested_url, index))
 
