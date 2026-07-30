@@ -74,7 +74,7 @@ For SDK installation and setup, visit the main [Fivetran Connector SDK repositor
 - **[redshift/simple_redshift_connector](https://github.com/fivetran/community_connectors/tree/main/redshift/simple_redshift_connector)** - Sync records from Redshift
 - **[redshift/large_data_volume](https://github.com/fivetran/community_connectors/tree/main/redshift/large_data_volume)** - Sync large data volumes from Redshift
 - **[redshift/using_unload](https://github.com/fivetran/community_connectors/tree/main/redshift/using_unload)** - Sync data from Redshift using UNLOAD to S3
-- **[delta_sharing](https://github.com/fivetran/community_connectors/tree/main/delta_sharing)** - Connect and sync data from Delta Sharing: An Open Protocol for Secure Data Sharing
+- **[delta_sharing](https://github.com/fivetran/community_connectors/tree/main/delta_sharing)** - Connect and sync data from Databricks Delta Sharing (now OpenSharing): An Open Protocol for Secure Data Sharing       
 
 ### Message Queues & Streaming
 
@@ -142,6 +142,7 @@ For SDK installation and setup, visit the main [Fivetran Connector SDK repositor
 - **[oauth2_and_accelo_api_connector_multithreading_enabled](https://github.com/fivetran/community_connectors/tree/main/oauth2_and_accelo_api_connector_multithreading_enabled)** - Sync data from Accelo API with OAuth 2.0 and multithreading
 - **[odata_api](https://github.com/fivetran/community_connectors/tree/main/odata_api)** - Sync data from OData APIs (versions 2 and 4)
 - **[oktopost](https://github.com/fivetran/community_connectors/tree/main/oktopost)** - Sync social media exports from Oktopost BI API
+- **[open_meteo_marine_weather](https://github.com/fivetran/community_connectors/tree/main/open_meteo_marine_weather)** - Sync hourly and daily marine weather data (wave height, direction, period, swell, wind waves) from the Open-Meteo Marine Weather API
 - **[oura_ring](https://github.com/fivetran/community_connectors/tree/main/oura_ring)** - This example shows how to sync health and wellness data from the Oura Ring API v2 using Connector SDK. It syncs daily activity, sleep, readiness, stress, and heart rate data with incremental syncing, cursor-based pagination, automatic flattening of nested contributor objects, and date-range chunking for high-volume heart rate data. You need to provide your Oura Personal Access Token for this example to work.
 - **[owasp_api_vulns](https://github.com/fivetran/community_connectors/tree/main/owasp_api_vulns)** - Sync OWASP API vulnerability data from NVD 2.0
 - **[partech](https://github.com/fivetran/community_connectors/tree/main/partech)** - Sync POS data from Partech (formerly Punchh)
@@ -156,6 +157,8 @@ For SDK installation and setup, visit the main [Fivetran Connector SDK repositor
 - **[sendcloud](https://github.com/fivetran/community_connectors/tree/main/sendcloud)** - Sync shipment data from Sendcloud API
 - **[sensor_tower](https://github.com/fivetran/community_connectors/tree/main/sensor_tower)** - Sync mobile app market intelligence from Sensor Tower
 - **[sensource](https://github.com/fivetran/community_connectors/tree/main/sensource)** - Sync traffic and occupancy metrics from SenSource
+- **[sftp_connector/bai2_sftp_connector](https://github.com/fivetran/community_connectors/tree/main/sftp_connector/bai2_sftp_connector)** - Fetch BAI2-format cash management files from an SFTP server and load all transactions into a single destination table with incremental sync and structured ACH field parsing
+- **[sftp_connector/fixed_width_sftp_connector](https://github.com/fivetran/community_connectors/tree/main/sftp_connector/fixed_width_sftp_connector)** - Read 12 fixed-width files from 3 SFTP subdirectories (ELAN, CUP, LPL/DFM) into 12 destination tables with soft-delete purge logic and implied-decimal parsing
 - **[similarweb](https://github.com/fivetran/community_connectors/tree/main/similarweb)** - Sync website performance metrics from SimilarWeb
 - **[smartsheets](https://github.com/fivetran/community_connectors/tree/main/smartsheets)** - Sync sheets and reports from Smartsheets
 - **[snipeitapp](https://github.com/fivetran/community_connectors/tree/main/snipeitapp)** - Sync IT asset management data from Snipe-IT
