@@ -103,7 +103,9 @@ For SDK installation and setup, visit the main [Fivetran Connector SDK repositor
 
 - **[amazon_video_central](https://github.com/fivetran/community_connectors/tree/main/amazon_video_central)** - Sync report data from Amazon Video Central API
 - **[awardco](https://github.com/fivetran/community_connectors/tree/main/awardco)** - Sync data from Awardco rewards platform
+- **[beehiiv](https://github.com/fivetran/community_connectors/tree/main/beehiiv)** - Sync newsletter data from the beehiiv API including publications, subscriptions, posts, email blasts, automations, and engagement metrics
 - **[betterstack](https://github.com/fivetran/community_connectors/tree/main/betterstack)** - Sync uptime monitoring data from Better Stack
+- **[bright_data_unlocker](https://github.com/fivetran/community_connectors/tree/main/bright_data_unlocker)** - Sync unlocked web page content for one or more URLs from the Bright Data Web Unlocker API
 - **[callminer](https://github.com/fivetran/fivetran_csdk_connectors/tree/main/callminer)** - Sync CallMiner Bulk Export data using OAuth2 authentication, export job polling, archive extraction, and per-data-type incremental state tracking
 - **[checkly](https://github.com/fivetran/community_connectors/tree/main/checkly)** - Sync monitoring check data and analytics from Checkly
 - **[clerk](https://github.com/fivetran/community_connectors/tree/main/clerk)** - Sync user data from Clerk authentication
@@ -118,6 +120,7 @@ For SDK installation and setup, visit the main [Fivetran Connector SDK repositor
 - **[fred](https://github.com/fivetran/community_connectors/tree/main/fred)** - Sync economic data from Federal Reserve Economic Data (FRED)
 - **[github](https://github.com/fivetran/community_connectors/tree/main/github)** - Sync repository data, commits, and pull requests from GitHub
 - **[github_traffic](https://github.com/fivetran/community_connectors/tree/main/github_traffic)** - Sync GitHub repository traffic data
+- **[gleif](https://github.com/fivetran/community_connectors/tree/main/gleif)** - Sync Legal Entity Identifier (LEI) reference data from the GLEIF API
 - **[gnews](https://github.com/fivetran/community_connectors/tree/main/gnews)** - Sync news articles from GNews API
 - **[google_trends](https://github.com/fivetran/community_connectors/tree/main/google_trends)** - Sync search interest data from Google Trends
 - **[goshippo](https://github.com/fivetran/community_connectors/tree/main/goshippo)** - Sync shipment data from Goshippo API
@@ -157,6 +160,7 @@ For SDK installation and setup, visit the main [Fivetran Connector SDK repositor
 - **[sendcloud](https://github.com/fivetran/community_connectors/tree/main/sendcloud)** - Sync shipment data from Sendcloud API
 - **[sensor_tower](https://github.com/fivetran/community_connectors/tree/main/sensor_tower)** - Sync mobile app market intelligence from Sensor Tower
 - **[sensource](https://github.com/fivetran/community_connectors/tree/main/sensource)** - Sync traffic and occupancy metrics from SenSource
+- **[sharepoint_multi_site_connector](https://github.com/fivetran/community_connectors/tree/main/sharepoint_multi_site_connector)** - Syncs CSV and Excel file data from multiple SharePoint Online sites using the Microsoft Graph API. Supports multi-sheet Excel workbooks, recursive folder traversal, incremental sync, and deletion handling.
 - **[sftp_connector/bai2_sftp_connector](https://github.com/fivetran/community_connectors/tree/main/sftp_connector/bai2_sftp_connector)** - Fetch BAI2-format cash management files from an SFTP server and load all transactions into a single destination table with incremental sync and structured ACH field parsing
 - **[sftp_connector/fixed_width_sftp_connector](https://github.com/fivetran/community_connectors/tree/main/sftp_connector/fixed_width_sftp_connector)** - Read 12 fixed-width files from 3 SFTP subdirectories (ELAN, CUP, LPL/DFM) into 12 destination tables with soft-delete purge logic and implied-decimal parsing
 - **[similarweb](https://github.com/fivetran/community_connectors/tree/main/similarweb)** - Sync website performance metrics from SimilarWeb
