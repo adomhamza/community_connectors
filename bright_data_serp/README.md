@@ -98,9 +98,20 @@ The connector processes data in the following order:
 
 ## Tables created
 
-| Table Name       | Primary Key              | Description                                                                                                                                 |
-|------------------|--------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
-| `SEARCH_RESULTS` | `query`, `result_index`  | Contains flattened search engine results. Each row represents one result for a query. Nested JSON is flattened with underscore separators. |
+The connector creates a single table named `search_results` with the following schema (refer to the `schema()` function):
+
+```json
+{
+  "table": "search_results",
+  "primary_key": ["query", "result_index"],
+  "columns": {
+    "query": "STRING",
+    "result_index": "INT"
+  }
+}
+```
+
+Additional columns are inferred from upserted result data. Nested JSON structures are flattened with underscore separators.
 
 ## Additional files
 
