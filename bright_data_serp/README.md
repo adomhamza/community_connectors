@@ -52,12 +52,14 @@ Note: All configuration values must be provided as strings per Fivetran SDK requ
 
 Configuration parameters:
 
-- `api_token` (required): Your Bright Data API token (Bearer token from the Bright Data dashboard)
+- `api_token` (required): Bright Data Bearer token used for API authentication
 - `search_query` (required): Search query or queries. Supports a single string, comma-separated values, newline-separated values, or a JSON array string
 - `search_engine` (optional): Search engine to use (`google`, `bing`, or `yandex`). Defaults to `google`
 - `search_zone` (optional): Bright Data SERP zone identifier. Defaults to `serp_api1`
 - `country` (optional): ISO 3166-1 alpha-2 country code for geolocation targeting. Defaults to `us`
 - `format` (optional): Response format from Bright Data (`json` or `html`). Defaults to `json`
+
+> Note: When submitting connector code as a community connector in the open-source [Community Connector repository](https://github.com/fivetran/community_connectors/tree/main), ensure the `configuration.json` file has placeholder values. When adding the connector to your production repository, ensure that the `configuration.json` file is not checked into version control to protect sensitive information.
 
 ## Requirements file
 
