@@ -81,7 +81,7 @@ The Bright Data API uses Bearer token authentication. To obtain your API token:
 
 The connector processes data in the following order:
 
-1. Configuration validation - Validates required parameters (refer to `validate_configuration()` in `helpers/validation.py`)
+1. Configuration validation - Validates required parameters (refer to `validate_configuration()` in `connector.py`)
 2. Query parsing - Normalizes `search_query` into a list of queries (refer to `parse_search_queries()`)
 3. API requests - Sends POST requests to Bright Data's `/request` endpoint (refer to `perform_search()` in `helpers/search.py`)
 4. Result processing - Flattens nested JSON and adds metadata columns (refer to `process_search_result()` in `helpers/data_processing.py`)
@@ -115,7 +115,6 @@ Additional columns are inferred from upserted result data. Nested JSON structure
 
 ## Additional files
 
-- **`helpers/validation.py`** - Configuration parameter validation
 - **`helpers/search.py`** - Bright Data SERP API interaction and retry logic
 - **`helpers/data_processing.py`** - Data flattening, field discovery, and upsert utilities
 
