@@ -115,9 +115,9 @@ Additional columns are inferred from upserted result data. Nested JSON structure
 
 ## Additional files
 
-- `helpers/validation.py` - Configuration parameter validation
-- `helpers/search.py` - Bright Data SERP API interaction and retry logic
-- `helpers/data_processing.py` - Data flattening, field discovery, and upsert utilities
+- **`helpers/validation.py`** - Configuration parameter validation
+- **`helpers/search.py`** - Bright Data SERP API interaction and retry logic
+- **`helpers/data_processing.py`** - Data flattening, field discovery, and upsert utilities
 
 ## Additional considerations
 
