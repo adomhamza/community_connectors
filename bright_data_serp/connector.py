@@ -26,6 +26,7 @@ from fivetran_connector_sdk import Logging as log
 from fivetran_connector_sdk import Operations as op
 
 __SERP_TABLE = "search_results"
+__CHECKPOINT_INTERVAL = 100
 __VALID_SEARCH_ENGINES = {"google", "bing", "yandex"}
 __VALID_RESPONSE_FORMATS = {"json", "html"}
 
@@ -153,6 +154,10 @@ def update(configuration: dict, state: dict):
 def sync_search_queries(configuration: dict, queries: list, api_token: str, state: dict):
     """
     Fetch search results for the requested queries and upsert them to Fivetran.
+
+    Processes one query at a time so progress can be checkpointed after each query's
+    rows are upserted. See:
+    https://fivetran.com/docs/connector-sdk/best-practices#checkpointregularlywhensyncing
     Args:
         configuration: Configuration dictionary containing search parameters.
         queries: List of search queries to execute.
@@ -164,29 +169,73 @@ def sync_search_queries(configuration: dict, queries: list, api_token: str, stat
     search_zone = configuration.get("search_zone")
     response_format = configuration.get("format")
 
-    query_payload = queries if len(queries) > 1 else queries[0]
-    search_results = perform_search(
-        api_token=api_token,
-        query=query_payload,
-        search_engine=search_engine,
-        country=country,
-        zone=search_zone,
-        response_format=response_format,
-    )
+    completed_queries = [
+        query for query in (state.get("completed_queries") or []) if isinstance(query, str)
+    ]
+    # Drop state entries that are no longer in the current config so a query removed
+    # and later re-added will be searched again.
+    completed_queries = [query for query in completed_queries if query in queries]
+    total_upserted = int(state.get("last_search_count") or 0)
 
-    processed_results = process_search_results(search_results, queries)
+    for query in queries:
+        if query in completed_queries:
+            log.info(f"Skipping previously completed query: {query}")
+            continue
 
-    if not processed_results:
-        log.warning("No search results returned from API")
-        return
+        search_results = perform_search(
+            api_token=api_token,
+            query=query,
+            search_engine=search_engine,
+            country=country,
+            zone=search_zone,
+            response_format=response_format,
+        )
 
-    log.info(f"Upserting {len(processed_results)} search results to Fivetran")
+        processed_results = process_search_results(search_results, [query])
 
-    all_fields = collect_all_fields(processed_results)
-    process_and_upsert_results(processed_results, all_fields, __SERP_TABLE)
+        if not processed_results:
+            log.warning(f"No search results returned from API for query: {query}")
+            completed_queries.append(query)
+            state["completed_queries"] = completed_queries
+            state["last_search_queries"] = list(completed_queries)
+            state["last_search_count"] = total_upserted
+            # Save the progress by checkpointing the state. This is important for ensuring that the sync process can resume
+            # from the correct position in case of next sync or interruptions.
+            # You should checkpoint even if you are not using incremental sync, as it tells Fivetran it is safe to write to destination.
+            # For large datasets, checkpoint regularly (e.g., every N records) not only at the end.
+            # Learn more about how and where to checkpoint by reading our best practices documentation
+            # (https://fivetran.com/docs/connector-sdk/best-practices#optimizingperformancewhenhandlinglargedatasets).
+            op.checkpoint(state=state)
+            continue
 
-    state["last_search_queries"] = queries
-    state["last_search_count"] = len(processed_results)
+        log.info(f"Upserting {len(processed_results)} search results for query: {query}")
+
+        all_fields = collect_all_fields(processed_results)
+        upserted_count = process_and_upsert_results(
+            processed_results,
+            all_fields,
+            __SERP_TABLE,
+            state=state,
+            checkpoint_interval=__CHECKPOINT_INTERVAL,
+        )
+        total_upserted += upserted_count
+
+        completed_queries.append(query)
+        state["completed_queries"] = completed_queries
+        state["last_search_queries"] = list(completed_queries)
+        state["last_search_count"] = total_upserted
+
+        # Save the progress by checkpointing the state. This is important for ensuring that the sync process can resume
+        # from the correct position in case of next sync or interruptions.
+        # You should checkpoint even if you are not using incremental sync, as it tells Fivetran it is safe to write to destination.
+        # For large datasets, checkpoint regularly (e.g., every N records) not only at the end.
+        # Learn more about how and where to checkpoint by reading our best practices documentation
+        # (https://fivetran.com/docs/connector-sdk/best-practices#optimizingperformancewhenhandlinglargedatasets).
+        op.checkpoint(state=state)
+        log.info(
+            f"Checkpointed after query '{query}' "
+            f"({len(completed_queries)}/{len(queries)} queries complete)"
+        )
 
 
 def process_search_results(search_results, queries: list) -> list:

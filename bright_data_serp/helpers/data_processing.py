@@ -63,10 +63,22 @@ def process_search_result(result: Any, query: str, result_index: int) -> dict:
     return final_result
 
 
-def process_and_upsert_results(processed_results: list, all_fields: set, table_name: str) -> None:
-    """Validate primary keys and upsert processed search result records."""
+def process_and_upsert_results(
+    processed_results: list,
+    all_fields: set,
+    table_name: str,
+    state: dict | None = None,
+    checkpoint_interval: int = 100,
+) -> int:
+    """Validate primary keys and upsert processed search result records.
+
+    When state is provided, checkpoints every checkpoint_interval upserts so large
+    result sets can resume after interruptions. See:
+    https://fivetran.com/docs/connector-sdk/best-practices#checkpointregularlywhensyncing
+    """
     primary_keys = {"query": str, "result_index": int}
     primary_key_errors = []
+    upserted_count = 0
 
     for result in processed_results:
         for pk, pk_type in primary_keys.items():
@@ -95,6 +107,21 @@ def process_and_upsert_results(processed_results: list, all_fields: set, table_n
         # The first argument is the name of the destination table.
         # The second argument is a dictionary containing the record to be upserted.
         op.upsert(table=table_name, data=row)
+        upserted_count += 1
+
+        if (
+            state is not None
+            and checkpoint_interval > 0
+            and upserted_count % checkpoint_interval == 0
+        ):
+            state["rows_upserted_in_batch"] = upserted_count
+            # Save the progress by checkpointing the state. This is important for ensuring that the sync process can resume
+            # from the correct position in case of next sync or interruptions.
+            # You should checkpoint even if you are not using incremental sync, as it tells Fivetran it is safe to write to destination.
+            # For large datasets, checkpoint regularly (e.g., every N records) not only at the end.
+            # Learn more about how and where to checkpoint by reading our best practices documentation
+            # (https://fivetran.com/docs/connector-sdk/best-practices#optimizingperformancewhenhandlinglargedatasets).
+            op.checkpoint(state=state)
 
     if primary_key_errors:
         unique_errors = list(set(primary_key_errors))
@@ -102,3 +129,8 @@ def process_and_upsert_results(processed_results: list, all_fields: set, table_n
             f"Primary key validation issues: {', '.join(unique_errors[:3])}"
             f"{' (and more)' if len(unique_errors) > 3 else ''}"
         )
+
+    if state is not None:
+        state.pop("rows_upserted_in_batch", None)
+
+    return upserted_count
