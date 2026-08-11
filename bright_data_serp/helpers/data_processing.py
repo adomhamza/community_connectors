@@ -91,6 +91,9 @@ def process_and_upsert_results(processed_results: list, all_fields: set, table_n
                     result[pk] = pk_type() if pk_type == str else 0
 
         row = {field: result.get(field) for field in all_fields}
+        # The 'upsert' operation is used to insert or update data in the destination table.
+        # The first argument is the name of the destination table.
+        # The second argument is a dictionary containing the record to be upserted.
         op.upsert(table=table_name, data=row)
 
     if primary_key_errors:
