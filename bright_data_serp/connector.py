@@ -54,7 +54,8 @@ def validate_configuration(configuration: dict) -> None:
     if not isinstance(search_query, (str, list)):
         raise ValueError("search_query must be a string or list of strings")
     if isinstance(search_query, list) and (
-        not search_query or not all(isinstance(item, str) and item.strip() for item in search_query)
+        not search_query
+        or not all(isinstance(item, str) and item.strip() for item in search_query)
     ):
         raise ValueError("search_query list must contain non-empty strings")
 
