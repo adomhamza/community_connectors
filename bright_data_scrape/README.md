@@ -49,7 +49,7 @@ fivetran init --template connectors/bright_data_scrape
 Configuration parameters:
 
 - `api_token` (required): Your Bright Data API token (Bearer token format, obtained from Bright Data dashboard)
-- `dataset_id` (required): The ID of the Bright Data dataset to use for scraping (e.g., `"gd_lyy3tktm25m4avu764"`)
+- `dataset_id` (required): The ID of the Bright Data dataset to use for scraping 
 - `scrape_url` (required): URL(s) to scrape. Supports multiple formats:
   - Single URL: `"https://www.example.com"`
   - Comma-separated: `"https://www.example.com,https://www.example2.com"`
