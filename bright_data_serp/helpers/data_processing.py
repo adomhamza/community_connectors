@@ -109,11 +109,8 @@ def process_and_upsert_results(
         op.upsert(table=table_name, data=row)
         upserted_count += 1
 
-        if (
-            state is not None
-            and checkpoint_interval > 0
-            and upserted_count % checkpoint_interval == 0
-        ):
+        checkpoint_due = state is not None and checkpoint_interval > 0
+        if checkpoint_due and upserted_count % checkpoint_interval == 0:
             state["rows_upserted_in_batch"] = upserted_count
             # Save the progress by checkpointing the state. This is important for ensuring that the sync process can resume
             # from the correct position in case of next sync or interruptions.
